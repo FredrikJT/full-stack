@@ -1,6 +1,5 @@
 package se.kry.codetest;
 
-import com.fasterxml.jackson.databind.util.JSONPObject;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -14,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -63,8 +63,6 @@ public class TestMainVerticle {
                 .sendJsonObject(new JsonObject()
                                 .put("url","service1"), event -> {});
 
-        System.out.println("hejda");
-
         WebClient.create(vertx)
                 .get(8080,"::1","/service")
                 .send(response -> testContext.verify(() -> {
@@ -77,6 +75,36 @@ public class TestMainVerticle {
                 }));
 
         assertEquals(0 ,0);
+    }
+
+    @Test
+    @DisplayName("start a web server and post a service and then delete it, get request should not show new service")
+    void start_http_server_and_add_service_then_delete_it(Vertx vertx, VertxTestContext testContext) throws InterruptedException {
+        WebClient.create(vertx)
+                .post(8080, "::1", "/service")
+                .sendJsonObject(new JsonObject()
+                        .put("url","service1"), event -> {
+                });
+
+
+        TimeUnit.SECONDS.sleep(1); //Waiting for service to be added
+        WebClient.create(vertx)
+                .delete(8080, "::1", "/service/service1")
+                .send(response -> testContext.verify(() -> {
+                    String body = response.result().bodyAsString();
+                    assertEquals(body,"OK");
+                }));
+
+
+        TimeUnit.SECONDS.sleep(2); //Waiting for service to be deleted
+            WebClient.create(vertx)
+                    .get(8080,"::1","/service")
+                    .send(response -> testContext.verify(() -> {
+                        JsonArray body = response.result().bodyAsJsonArray();
+
+                        assertEquals(1, body.size());
+                        testContext.completeNow();
+                    }));
     }
 
 

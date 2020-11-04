@@ -62,9 +62,12 @@ public class MainVerticle extends AbstractVerticle {
           .putHeader("content-type", "text/plain")
           .end("OK");
     });
-    router.delete("/service").handler(req -> {
+    router.delete("/service/:id").handler(routingContext -> {
+      String id = routingContext.request().getParam("id");
       System.out.println("deleting");
-      req.response()
+      System.out.println(id);
+      services.remove(id);
+      routingContext.response()
               .putHeader("content-type", "text/plain")
               .end("OK");
     });
