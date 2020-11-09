@@ -45,7 +45,8 @@ public class TestMainVerticle {
       WebClient.create(vertx)
               .post(8080, "::1", "/service")
               .sendJsonObject(new JsonObject()
-                      .put("url","service1"),
+                      .put("url","http://www.blocket.se")
+                      .put("name","service1"),
                       response -> testContext.verify(() -> {
                   assertEquals(200, response.result().statusCode());
                   String body = response.result().body().toString();
@@ -61,16 +62,17 @@ public class TestMainVerticle {
         WebClient.create(vertx)
                 .post(8080, "::1", "/service")
                 .sendJsonObject(new JsonObject()
-                                .put("url","service1"), event -> {});
+                        .put("url","http://www.blocket.se")
+                        .put("name","service1"), event -> {});
 
         WebClient.create(vertx)
                 .get(8080,"::1","/service")
                 .send(response -> testContext.verify(() -> {
                     JsonArray body = response.result().bodyAsJsonArray();
 
-                    JsonObject newService = (JsonObject) body.getValue(1);
-                   String serviceName = (String) newService.getValue("name");
-                    assertEquals("service1", serviceName);
+                    JsonObject newService = (JsonObject) body.getValue(0);
+                   String serviceName = (String) newService.getValue("url");
+                    assertEquals("http://www.blocket.se", serviceName);
                     testContext.completeNow();
                 }));
 
@@ -83,7 +85,8 @@ public class TestMainVerticle {
         WebClient.create(vertx)
                 .post(8080, "::1", "/service")
                 .sendJsonObject(new JsonObject()
-                        .put("url","service1"), event -> {
+                        .put("url","http://www.blocket.se")
+                        .put("name","service1"), event -> {
                 });
 
 
@@ -102,7 +105,7 @@ public class TestMainVerticle {
                     .send(response -> testContext.verify(() -> {
                         JsonArray body = response.result().bodyAsJsonArray();
 
-                        assertEquals(1, body.size());
+                        assertEquals(2, body.size());
                         testContext.completeNow();
                     }));
     }

@@ -8,6 +8,8 @@ import io.vertx.ext.jdbc.JDBCClient;
 import io.vertx.ext.sql.ResultSet;
 import io.vertx.ext.sql.SQLClient;
 
+import java.sql.PreparedStatement;
+
 public class DBConnector {
 
   private final String DB_PATH = "poller.db";
