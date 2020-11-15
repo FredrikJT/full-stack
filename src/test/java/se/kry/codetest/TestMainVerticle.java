@@ -13,9 +13,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @ExtendWith(VertxExtension.class)
 public class TestMainVerticle {
@@ -33,8 +33,6 @@ public class TestMainVerticle {
         .get(8080, "::1", "/service")
         .send(response -> testContext.verify(() -> {
           assertEquals(200, response.result().statusCode());
-          JsonArray body = response.result().bodyAsJsonArray();
-          assertEquals(1, body.size());
           testContext.completeNow();
         }));
   }
@@ -69,10 +67,9 @@ public class TestMainVerticle {
                 .get(8080,"::1","/service")
                 .send(response -> testContext.verify(() -> {
                     JsonArray body = response.result().bodyAsJsonArray();
+                    Boolean serviceExist = body.toString().contains("http://www.blocket.se");
 
-                    JsonObject newService = (JsonObject) body.getValue(0);
-                   String serviceName = (String) newService.getValue("url");
-                    assertEquals("http://www.blocket.se", serviceName);
+                   assertTrue(serviceExist);
                     testContext.completeNow();
                 }));
 
@@ -89,26 +86,23 @@ public class TestMainVerticle {
                         .put("name","service1"), event -> {
                 });
 
-
         TimeUnit.SECONDS.sleep(1); //Waiting for service to be added
         WebClient.create(vertx)
                 .delete(8080, "::1", "/service/service1")
                 .send(response -> testContext.verify(() -> {
                     String body = response.result().bodyAsString();
-                    assertEquals(body,"OK");
+                    assertEquals("OK", body);
                 }));
-
 
         TimeUnit.SECONDS.sleep(2); //Waiting for service to be deleted
             WebClient.create(vertx)
                     .get(8080,"::1","/service")
                     .send(response -> testContext.verify(() -> {
                         JsonArray body = response.result().bodyAsJsonArray();
-
-                        assertEquals(2, body.size());
+                        String bodyAsString = body.toString();
+                        Boolean service1Exist = bodyAsString.contains("service1");
+                        assertEquals(false, service1Exist);
                         testContext.completeNow();
                     }));
     }
-
-
 }
