@@ -9,6 +9,7 @@ import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.ext.web.handler.StaticHandler;
 
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 
@@ -58,7 +59,7 @@ public class MainVerticle extends AbstractVerticle {
   }
 
   private void createServiceTable(){
-    Future<ResultSet> queryResultCreateServiceTable = connector.query("CREATE TABLE Services (name string, url string, status string)");
+    Future<ResultSet> queryResultCreateServiceTable = connector.query("CREATE TABLE Services (name string, url string, status string, date string)");
     queryResultCreateServiceTable.setHandler(result -> {
       if (result.succeeded()) {
         System.out.println("Service table created");
@@ -68,8 +69,8 @@ public class MainVerticle extends AbstractVerticle {
     });
   }
 
-  private void addServiceToDB(String name, String url){
-    Future<ResultSet> queryResultInsertService = connector.query("INSERT INTO Services VALUES (?, ?, ?)", new JsonArray().add(name).add(url).add("UNKNOWN"));
+  private void addServiceToDB(String name, String url, String date){
+    Future<ResultSet> queryResultInsertService = connector.query("INSERT INTO Services VALUES (?, ?, ?, ?)", new JsonArray().add(name).add(url).add("UNKNOWN").add(date));
     queryResultInsertService.setHandler(result -> {
       if (result.succeeded()){
         System.out.println("Success: Added service with name:" + name + " and url " + url);
@@ -123,12 +124,11 @@ public class MainVerticle extends AbstractVerticle {
           req.response()
                   .putHeader("content-type", "application/json")
                   .end(resultArray.toString());
-          System.out.println("Success: got these services: " + resultArray.toString());
         } else {
           req.response()
                   .putHeader("content-type", "application/json")
                   .end("failed");
-          System.out.println("Fail:" + result);
+          System.out.println("Fail: Could not fetch services from DB. " + result);
         }
       });
 
@@ -149,7 +149,7 @@ public class MainVerticle extends AbstractVerticle {
     });
     router.post("/service").handler(req -> {
       JsonObject jsonBody = req.getBodyAsJson();
-      addService(jsonBody.getString("name"), jsonBody.getString("url"));
+      addService(jsonBody.getString("name"), jsonBody.getString("url"), LocalDateTime.now().toString());
       req.response()
           .putHeader("content-type", "text/plain")
           .end("OK");
@@ -163,9 +163,9 @@ public class MainVerticle extends AbstractVerticle {
     });
   }
 
-  private void addService(String name, String url){
+  private void addService(String name, String url, String date){
     services.put(url, "UNKNOWN");
-    addServiceToDB(name, url);
+    addServiceToDB(name, url, date);
   }
 
   private void deleteService(String id){
