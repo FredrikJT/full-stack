@@ -8,8 +8,6 @@ import io.vertx.ext.jdbc.JDBCClient;
 import io.vertx.ext.sql.ResultSet;
 import io.vertx.ext.sql.SQLClient;
 
-import java.sql.PreparedStatement;
-
 public class DBConnector {
 
   private final String DB_PATH = "poller.db";
@@ -27,7 +25,6 @@ public class DBConnector {
   public Future<ResultSet> query(String query) {
     return query(query, new JsonArray());
   }
-
 
   public Future<ResultSet> query(String query, JsonArray params) {
     if(query == null || query.isEmpty()) {
@@ -48,6 +45,4 @@ public class DBConnector {
     });
     return queryResultFuture;
   }
-
-
 }

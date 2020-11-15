@@ -10,12 +10,10 @@ import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.ext.web.handler.StaticHandler;
 
 import java.time.LocalDateTime;
-import java.util.HashMap;
 import java.util.List;
 
 public class MainVerticle extends AbstractVerticle {
 
-  private HashMap<String, String> services = new HashMap<>();
   private DBConnector connector;
   private BackgroundPoller poller = new BackgroundPoller();
 
@@ -24,11 +22,9 @@ public class MainVerticle extends AbstractVerticle {
     connector = new DBConnector(vertx);
 
     checkAndCreateServiceTable();
-    addSavedUrlsToHashServices();
 
     Router router = Router.router(vertx);
     router.route().handler(BodyHandler.create());
-    services.put("https://www.kry.se", "UNKNOWN");
     vertx.setPeriodic(1000 * 5, timerId -> poller.pollServices(vertx, connector));
     setRoutes(router);
     vertx
@@ -91,32 +87,9 @@ public class MainVerticle extends AbstractVerticle {
     });
   }
 
-  private void deleteAllRowsFromDB(){
-    Future<ResultSet> queryResultRemoveService = connector.query("DELETE FROM Services");
-    queryResultRemoveService.setHandler(result -> {
-      if (result.succeeded()){
-        System.out.println("Success: Removed all rows from Services");
-      } else {
-        System.out.println("Fail: Could not remove all rows from Services");
-      }
-    });
-  }
-
-  public void getAllServicesFromDB(){
-    Future<ResultSet> queryResultGetServices = connector.query("SELECT DISTINCT * FROM Services");
-    queryResultGetServices.setHandler(result -> {
-      if (result.succeeded()){
-        System.out.println("Success:" + result.result().toJson());
-      } else {
-        System.out.println("Fail:" + result);
-      }
-    });
-  }
-
   private void setRoutes(Router router){
     router.route("/*").handler(StaticHandler.create());
     router.get("/service").handler(req -> {
-
       Future<ResultSet> queryResultGetServices = connector.query("SELECT DISTINCT * FROM Services");
       queryResultGetServices.setHandler(result -> {
         if (result.succeeded()){
@@ -131,82 +104,24 @@ public class MainVerticle extends AbstractVerticle {
           System.out.println("Fail: Could not fetch services from DB. " + result);
         }
       });
-
-      /*
-      List<JsonObject> jsonServices = services
-          .entrySet()
-          .stream()
-          .map(service ->
-              new JsonObject()
-                      //TODO: Return entry from DB with name, url and status.
-                  .put("url", service.getKey())
-                  .put("status", service.getValue()))
-          .collect(Collectors.toList());
-      req.response()
-          .putHeader("content-type", "application/json")
-          .end(new JsonArray(jsonServices).encode());
-      */
     });
+
     router.post("/service").handler(req -> {
       JsonObject jsonBody = req.getBodyAsJson();
-      addService(jsonBody.getString("name"), jsonBody.getString("url"), LocalDateTime.now().toString());
+      addServiceToDB(jsonBody.getString("name"), jsonBody.getString("url"), LocalDateTime.now().toString());
       req.response()
           .putHeader("content-type", "text/plain")
           .end("OK");
     });
+
     router.delete("/service/:id").handler(routingContext -> {
       String id = routingContext.request().getParam("id");
-      deleteService(id);
+      removeServiceFromDB(id);
       routingContext.response()
               .putHeader("content-type", "text/plain")
               .end("OK");
     });
   }
-
-  private void addService(String name, String url, String date){
-    services.put(url, "UNKNOWN");
-    addServiceToDB(name, url, date);
-  }
-
-  private void deleteService(String id){
-    System.out.println("deleting service: " + id);
-    services.remove(id);
-    removeServiceFromDB(id);
-  }
-
-  private void addSavedUrlsToHashServices(){
-    Future<ResultSet> queryResultSelectServiceTable = connector.query("SELECT url FROM Services");
-    queryResultSelectServiceTable.setHandler(result -> {
-      if (result.succeeded()) {
-        System.out.println("Service table exist");
-
-        ResultSet results = result.result();
-        List<JsonArray> resultList = results.getResults();
-        resultList.forEach(urlJson -> {
-          String url = urlJson.getString(0);
-          services.put(url, "UNKNOWN");
-        });
-
-      } else if (result.cause().equals(null)) {
-        System.out.println("Failed to add saved urls to services ...");
-      } else {
-        System.out.println("Something happened");
-      }
-    });
-  }
-
-  public void dropServicesTable(){
-    Future<ResultSet> queryResultGetServices = connector.query("DROP TABLE Services");
-    queryResultGetServices.setHandler(result -> {
-      if (result.succeeded()){
-        result.result().toJson();
-        System.out.println("Success: Table dropped");
-      } else {
-        System.out.println("Fail:" + result);
-      }
-    });
-  }
-
 }
 
 
